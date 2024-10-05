@@ -114,3 +114,27 @@ data = loadPMedianProblem(:pmedcap03)
 
 dict_solutions = p_median_new_combinatorial_benders(data);
 
+
+function reformulate_subproblem(subproblem::Model, data::PMedianProblem,extreme_points::Vector{ExtremePoint})
+    I = 1:nc(data)
+    P = 1:length(extreme_points)
+    y = subproblem[:y]
+
+    if !isnothing(subproblem[:rebind_y])
+        delete.(subproblem, subproblem[:rebind_y])
+        unregister.(subproblem, :rebind_y)
+    end
+    if !isnothing(subproblem[:unique])
+        delete.(subproblem, subproblem[:unique])
+        unregister.(subproblem, :unique)
+    end
+    if !isnothing(subproblem[:λ])
+        delete.(subproblem, subproblem[:λ])
+        unregister(subproblem, :λ)
+    end
+
+    @variable(subproblem, λ[P] ≥ 0.0)
+    @constraint(subproblem, rebind_y[i in I, j in I], sum(extreme_points[p].y[i, j] * λ[p] for p in P) == y[i, j])
+    @constraint(subproblem, unique, sum(λ[p] for p in P) <= 1)
+end 
+
